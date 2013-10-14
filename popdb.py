@@ -1,7 +1,10 @@
 from tables import *
+import numpy as np
+from numpy  import unique
 
-try:h5f=openFile('data.hdf5',mode='w')
-except ValueError: pass #already open
+#make an empty file data.hdf5 to start
+h5f=openFile('data.hdf5',mode='a') #w creates it?
+
 
 class traind(IsDescription):
     """
@@ -25,7 +28,7 @@ class testd(IsDescription):
     y
     z
     """
-    seqid=UInt64Col()
+    seqid=UInt32Col()
     t=UInt64Col()   
     x=Float32Col()
     y=Float32Col()
@@ -38,18 +41,27 @@ class questionsd(IsDescription):
     seqid=UInt32Col()
     quiz=UInt32Col()
 
+class acceld(IsDescription):
+    t=UInt64Col()       
+    x=Float32Col()
+    y=Float32Col()
+    z=Float32Col()
     
 def DELETEandcreatetbls():
-    try: h5f.removeNode('/train');
+    
+    try: h5f.removeNode('/dump',recursive=True);
+    except: pass
+    h5f.createGroup('/','dump')
+    for ads in ['train','test']:
+        try: h5f.removeNode('/'+ads,recursive=True)
+        except:pass
+        h5f.createGroup('/',ads)
+    h5f.createTable('/dump','train',traind,"training data"
+                       ,expectedrows=30e6)    
+    h5f.createTable('/dump','test',testd,"testing data"
+                       ,expectedrows=30e6)
+    try: h5f.removeNode('/questions');
     except:pass
-    h5f.createTable('/','train',traind,"training data"
-                       ,expectedrows=30e6)
-    try: h5f.removeNode('/test')
-    except:pass;    
-    h5f.createTable('/','test',testd,"testing data"
-                       ,expectedrows=30e6)
-    try: h5f.removeNode('/questions')
-    except:pass;    
     h5f.createTable('/','questions',questionsd,"question data"
                        ,expectedrows=100e3)
 
@@ -97,7 +109,40 @@ def fillerup():
     DELETEandcreatetbls()
     for af,fillf in \
     [('train.csv',filltrain),('test.csv',filltest),('questions.csv',fillqs)]:
-        with open(af) as df: fillf(df,h5f.getNode('/'+af[:-4]))
+        if af!='questions.csv':fl='/dump/';
+        else:fl='/'
+        with open(af) as df: fillf(df,h5f.getNode(fl+af[:-4]))
+    #h5f.getNode('/dump/train').cols.devid.createCSIndex()
+    #h5f.getNode('/dump/test').cols.seqid.createCSIndex()
     
+    import warnings
+    with warnings.catch_warnings(): #it warns b/c a digit is used to
+    #id a deviceid or a seqid...a number can't be used as a python
+    #obj attrib
+        warnings.simplefilter("ignore")
+        #each sensor into its table 
+        trt=h5f.getNode('/dump/train')
+        dids=np.unique(trt.cols.devid[:])
+        for adid in dids:
+            sdid=str(adid)
+            tbl=h5f.createTable('/train',sdid,acceld,expectedrows=75e3)
+            tbl.append([(r['t'],r['x'],r['y'],r['z']) 
+                for r in trt.where('devid=='+sdid)])
+            tbl.flush()
+        #each seq into its tabl
+        tst=h5f.getNode('/dump/test')
+        sids=np.unique(tst.cols.seqid[:])
+        for asid in sids:
+            sid=str(asid)
+            tbl=h5f.createTable('/test',sid,acceld,expectedrows=300)
+            tbl.append([(r['t'],r['x'],r['y'],r['z']) 
+                for r in tst.where('seqid=='+sid)])
+            tbl.flush()
+    h5f.removeNode('/dump',recursive=True)
+    h5f.close()
 
+
+
+if __name__=='__main__': fillerup()    
+    
     

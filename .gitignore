@@ -1,10 +1,8 @@
 #big files
-*.hdf5
-train.csv
-sampleSubmission.csv
-questions.csv
-test.csv
-parsed
+data/
+
+
+*.exe
 
 *.py[cod]
 

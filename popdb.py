@@ -3,7 +3,7 @@ import numpy as np
 from numpy  import unique
 
 #make an empty file data.hdf5 to start
-h5f=openFile('data.hdf5',mode='a') #w creates it?
+h5f=openFile('datad.hdf5',mode='w') #w creates it?
 
 
 class traind(IsDescription):
@@ -143,6 +143,14 @@ def fillerup():
 
 
 
-if __name__=='__main__': fillerup()    
+if __name__=='__main__':
+    fillerup()
+    h5f=openFile('datad.hdf5',mode='r')
+    import warnings
+    with warnings.catch_warnings():
+        h5f.copyFile('data.hdf5')
+    h5f.close()
+    import os
+    os.remove('datad.hdf5')	
     
     

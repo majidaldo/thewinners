@@ -1,3 +1,11 @@
+#big files
+*.hdf5
+train.csv
+sampleSubmission.csv
+questions.csv
+test.csv
+parsed
+
 *.py[cod]
 
 # C extensions
